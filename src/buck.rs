@@ -125,11 +125,10 @@ pub struct RustBinaryRule {
     /// name with .rs appended. This can be overridden with the crate_root rule
     /// parameter.
     srcs: Vec<PathBuf>,
-    /// The set of dependencies of this rule. Currently, this supports
-    /// rust_library and prebuilt_rust_library rules.
-    features: Vec<String>,
-    /// These are passed to rustc with --cfg feature="{feature}", and can be
+    /// These are passed to `rustc` with --cfg feature="{feature}", and can be
     /// used in the code with #[cfg(feature = "{feature}")].
+    features: Vec<String>,
+    /// The set of additional compiler flags to pass to `rustc`.
     rustc_flags: Vec<String>,
     /// The set of additional flags to pass to the linker.
     linker_flags: Vec<String>,
@@ -194,11 +193,10 @@ pub struct RustLibraryRule {
     /// name with .rs appended. This can be overridden with the crate_root rule
     /// parameter.
     srcs: Vec<PathBuf>,
-    /// The set of dependencies of this rule. Currently, this supports
-    /// rust_library and prebuilt_rust_library rules.
-    features: Vec<String>,
-    /// These are passed to rustc with --cfg feature="{feature}", and can be
+    /// These are passed to `rustc` with --cfg feature="{feature}", and can be
     /// used in the code with #[cfg(feature = "{feature}")].
+    features: Vec<String>,
+    /// The set of additional compiler flags to pass to `rustc`.
     rustc_flags: Vec<String>,
     #[serde(rename = "crate")]
     /// Set the generated crate name (for libraries) or executable name (for
@@ -238,11 +236,10 @@ pub struct RustTestRule {
     /// still expected to accept the same command-line parameters and
     /// produce the same output as the test framework.
     framework: bool,
-    /// The set of dependencies of this rule. Currently, this supports
-    /// rust_library and prebuilt_rust_library rules.
-    features: Vec<String>,
-    /// These are passed to rustc with --cfg feature="{feature}", and can be
+    /// These are passed to `rustc` with --cfg feature="{feature}", and can be
     /// used in the code with #[cfg(feature = "{feature}")].
+    features: Vec<String>,
+    /// The set of additional compiler flags to pass to `rustc`.
     rustc_flags: Vec<String>,
     #[serde(rename = "crate")]
     /// Set the generated crate name (for libraries) or executable name (for
