@@ -48,7 +48,7 @@ impl BuildRuleType {
 
     pub fn is_supported(&self) -> bool {
         match self {
-            | BuildRuleType::RustBinary(..)
+            BuildRuleType::RustBinary(..)
             | BuildRuleType::RustLibrary(..)
             | BuildRuleType::RustTest(..) => true,
             _ => false,
@@ -62,6 +62,46 @@ impl BuildRuleType {
             BuildRuleType::RustTest(..) => "rust_test",
             BuildRuleType::PrebuiltRustLibrary(..) => "prebuilt_rust_library",
             _ => "<unrecognized>",
+        }
+    }
+
+    pub fn is_library(&self) -> bool {
+        match self {
+            BuildRuleType::RustLibrary(..) | BuildRuleType::PrebuiltRustLibrary(..) => true,
+            _ => false,
+        }
+    }
+
+    #[rustfmt::skip]
+    pub fn crate_root(&self) -> Option<&Path> {
+        let (srcs, crate_root, krate) = match self {
+            | BuildRuleType::RustBinary(RustBinaryRule { ref srcs, ref crate_root, ref krate, ..})
+            | BuildRuleType::RustLibrary(RustLibraryRule { ref srcs, ref crate_root, ref krate, ..})
+            | BuildRuleType::RustTest(RustTestRule { ref srcs, ref crate_root, ref krate, ..}) => {
+                (srcs, crate_root, krate)
+            },
+            _ => None?,
+        };
+
+        if !crate_root.as_os_str().is_empty() {
+            Some(crate_root)
+        } else {
+            let default_filename = if self.is_library() {
+                "lib.rs"
+            } else {
+                "main.rs"
+            };
+            let crate_filename = &format!("{}.rs", krate);
+
+            let shortest_path_for_filename = |file_name: &str| srcs
+                .iter()
+                .filter_map(|x| x.file_name().map(|y| (x.components().count(), x, y)))
+                .filter(|(_, _, name)| *name == file_name)
+                .min_by_key(|(count, _, _)| *count)
+                .map(|(_, path, _)| path.as_path());
+
+            shortest_path_for_filename(default_filename).or_else(||
+                shortest_path_for_filename(crate_filename))
         }
     }
 }
@@ -84,7 +124,7 @@ pub struct RustBinaryRule {
     /// this is lib.rs for libraries, main.rs for executables, or the crate's
     /// name with .rs appended. This can be overridden with the crate_root rule
     /// parameter.
-    srcs: Vec<String>,
+    srcs: Vec<PathBuf>,
     /// The set of dependencies of this rule. Currently, this supports
     /// rust_library and prebuilt_rust_library rules.
     features: Vec<String>,
@@ -99,7 +139,7 @@ pub struct RustBinaryRule {
     krate: String,
     /// Set the name of the top-level source file for the crate, which can be
     /// used to override the default (see srcs).
-    crate_root: Vec<String>,
+    crate_root: PathBuf,
     /// Determines whether to build and link this rule's dependencies statically
     /// or dynamically. Can be either static, static_pic or shared.
     link_style: LinkStyle,
@@ -153,7 +193,7 @@ pub struct RustLibraryRule {
     /// this is lib.rs for libraries, main.rs for executables, or the crate's
     /// name with .rs appended. This can be overridden with the crate_root rule
     /// parameter.
-    srcs: Vec<String>,
+    srcs: Vec<PathBuf>,
     /// The set of dependencies of this rule. Currently, this supports
     /// rust_library and prebuilt_rust_library rules.
     features: Vec<String>,
@@ -166,7 +206,7 @@ pub struct RustLibraryRule {
     krate: String,
     /// Set the name of the top-level source file for the crate, which can be
     /// used to override the default (see srcs).
-    crate_root: Vec<String>,
+    crate_root: PathBuf,
     /// Controls how a library should be linked.
     preferred_linkage: PreferredLinkage,
     /// List of build targets that identify tests that exercise this target.
@@ -192,7 +232,7 @@ pub struct RustTestRule {
     /// this is lib.rs for libraries, main.rs for executables, or the crate's
     /// name with .rs appended. This can be overridden with the crate_root rule
     /// parameter.
-    srcs: Vec<String>,
+    srcs: Vec<PathBuf>,
     /// Use the standard test framework. If this is set to false, then the
     /// result is a normal executable which requires a `main()`, etc. It is
     /// still expected to accept the same command-line parameters and
@@ -210,7 +250,7 @@ pub struct RustTestRule {
     krate: String,
     /// Set the name of the top-level source file for the crate, which can be
     /// used to override the default (see srcs).
-    crate_root: Vec<String>,
+    crate_root: PathBuf,
     /// Determines whether to build and link this rule's dependencies statically
     /// or dynamically. Can be either static, static_pic or shared.
     link_style: LinkStyle,
@@ -373,3 +413,95 @@ impl fmt::Display for BuckError {
 }
 
 impl std::error::Error for BuckError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crate_root_default_src() {
+        let rule = BuildRuleType::RustBinary(RustBinaryRule {
+            srcs: vec![PathBuf::from("src/main.rs")],
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("src/main.rs")));
+
+        let rule = BuildRuleType::RustBinary(RustBinaryRule {
+            srcs: vec![PathBuf::from("src/lib.rs")],
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), None);
+
+        let rule = BuildRuleType::RustBinary(RustBinaryRule {
+            srcs: vec![PathBuf::from("src/mycrate.rs")],
+            krate: String::from("mycrate"),
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("src/mycrate.rs")));
+
+        let rule = BuildRuleType::RustLibrary(RustLibraryRule {
+            srcs: vec![PathBuf::from("src/lib.rs")],
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("src/lib.rs")));
+
+        let rule = BuildRuleType::RustLibrary(RustLibraryRule {
+            srcs: vec![PathBuf::from("src/main.rs")],
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), None);
+
+        let rule = BuildRuleType::RustLibrary(RustLibraryRule {
+            srcs: vec![PathBuf::from("src/mycrate.rs")],
+            krate: String::from("mycrate"),
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("src/mycrate.rs")));
+    }
+
+    #[test]
+    fn crate_root_override() {
+        let rule = BuildRuleType::RustBinary(RustBinaryRule {
+            srcs: vec![PathBuf::from("src/main.rs"), PathBuf::from("override.rs")],
+            crate_root: PathBuf::from("override.rs"),
+            ..Default::default()
+        });
+        // TODO: Check if crate_root is in srcs?
+        assert_eq!(rule.crate_root(), Some(Path::new("override.rs")));
+    }
+
+    #[test]
+    fn crate_root_shortest_path() {
+        let rule = BuildRuleType::RustBinary(RustBinaryRule {
+            srcs: vec![
+                PathBuf::from("some/inner/main.rs"),
+                PathBuf::from("main.rs"),
+                PathBuf::from("some/main.rs"),
+            ],
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("main.rs")));
+    }
+
+    #[test]
+    fn crate_root_preference() {
+        let rule = BuildRuleType::RustLibrary(RustLibraryRule {
+            srcs: vec![
+                PathBuf::from("lib.rs"),
+                PathBuf::from("some/lib.rs"),
+                PathBuf::from("mycrate.rs"),
+            ],
+            krate: String::from("mycrate"),
+            crate_root: PathBuf::from("some/lib.rs"),
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("some/lib.rs")));
+
+        let rule = BuildRuleType::RustLibrary(RustLibraryRule {
+            srcs: vec![PathBuf::from("mycrate.rs"), PathBuf::from("some/lib.rs")],
+            krate: String::from("mycrate"),
+            ..Default::default()
+        });
+        assert_eq!(rule.crate_root(), Some(Path::new("some/lib.rs")));
+    }
+}
