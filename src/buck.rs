@@ -328,6 +328,22 @@ pub fn query_rules(dir: impl AsRef<Path>, rule: impl AsRef<str>) -> Result<Rules
     from_bytes(&output.stdout).map_err(|x| x.into())
 }
 
+pub fn buck_root(cwd: impl AsRef<Path>) -> Result<PathBuf, failure::Error> {
+    let output = Command::new("buck")
+        .arg("root")
+        .current_dir(cwd.as_ref())
+        .output()?;
+
+    if output.status.success() {
+        Ok(PathBuf::from(String::from_utf8(output.stdout)?.trim()))
+    } else {
+        Err(BuckError(
+            output.status,
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))?
+    }
+}
+
 #[derive(Debug)]
 pub struct BuckError(std::process::ExitStatus, String);
 

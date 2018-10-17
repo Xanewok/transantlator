@@ -19,9 +19,11 @@ fn main() -> Result<(), failure::Error> {
     let file_path = PathBuf::from(matches.opt_str("f").unwrap());
     let rule = matches.opt_str("r").unwrap();
 
-    let rules = buck::query_rules(file_path.parent().unwrap(), rule)?;
+    let root = buck::buck_root(file_path.parent().unwrap())?;
+    let rules = buck::query_rules(&root, rule)?;
 
     println!("{:#?}", rules);
+    println!("root: {:#?}", root);
 
     Ok(())
 }
