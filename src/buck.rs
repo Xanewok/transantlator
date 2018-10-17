@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -316,6 +317,24 @@ pub fn from_bytes(bytes: &[u8]) -> Result<Rules, serde_json::Error> {
 
 pub fn query_rules(dir: impl AsRef<Path>, rule: impl AsRef<str>) -> Result<Rules, failure::Error> {
     let output = buck_command(dir, rule).output()?;
+    if !output.status.success() {
+        return Err(BuckError(
+            output.status,
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        )
+        .into());
+    }
 
     from_bytes(&output.stdout).map_err(|x| x.into())
 }
+
+#[derive(Debug)]
+pub struct BuckError(std::process::ExitStatus, String);
+
+impl fmt::Display for BuckError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Error running Buck ({}): {}", self.0, self.1)
+    }
+}
+
+impl std::error::Error for BuckError {}
