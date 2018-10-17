@@ -43,6 +43,14 @@ fn main() -> Result<(), failure::Error> {
         let _ = file.write(output.as_bytes());
     }
 
+    if let Some((target, rule)) = rules.iter().find(|(_, r)| !r.typ.is_supported()) {
+        panic!(
+            "Build target {} (of type {}) not supported",
+            target,
+            rule.typ.name()
+        );
+    }
+
     use petgraph::visit::Walker;
     let topo = petgraph::visit::Topo::new(&dep_graph);
     for ident in topo.iter(&dep_graph) {

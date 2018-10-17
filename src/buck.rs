@@ -45,6 +45,25 @@ impl BuildRuleType {
             _ => None,
         }
     }
+
+    pub fn is_supported(&self) -> bool {
+        match self {
+            | BuildRuleType::RustBinary(..)
+            | BuildRuleType::RustLibrary(..)
+            | BuildRuleType::RustTest(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            BuildRuleType::RustBinary(..) => "rust_binary",
+            BuildRuleType::RustLibrary(..) => "rust_library",
+            BuildRuleType::RustTest(..) => "rust_test",
+            BuildRuleType::PrebuiltRustLibrary(..) => "prebuilt_rust_library",
+            _ => "<unrecognized>",
+        }
+    }
 }
 
 /// A rust_binary() rule builds a native executable from the supplied set of
