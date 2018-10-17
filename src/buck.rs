@@ -6,18 +6,20 @@ use std::process::Command;
 pub type BuildTarget = String;
 pub type BuildTargetPattern = String;
 
+pub type Rules = HashMap<BuildTarget, BuildRule>;
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct CommonBuildRule {
     /// The name of the build rule, which must be unique within a build file.
-    name: String,
+    pub name: String,
     /// The build rule's dependencies, expressed as a list of build targets.
     #[serde(default)]
-    deps: Vec<BuildTarget>,
+    pub deps: Vec<BuildTarget>,
     /// List of build target patterns that identify the build rules that can
     /// include this rule as a dependency, for example, by listing it in their
     /// deps or exported_deps attributes. For more information, see visibility.
     #[serde(default)]
-    visibility: Vec<BuildTargetPattern>,
+    pub visibility: Vec<BuildTargetPattern>,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -281,16 +283,14 @@ impl Default for PreferredLinkage {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct BuildRule {
     #[serde(rename = "buck.base_path")]
-    base_path: PathBuf,
+    pub base_path: PathBuf,
     #[serde(rename = "buck.direct_dependencies")]
-    direct_dependencies: Vec<BuildTarget>,
+    pub direct_dependencies: Vec<BuildTarget>,
     #[serde(flatten)]
-    common: CommonBuildRule,
+    pub common: CommonBuildRule,
     #[serde(flatten)]
-    typ: BuildRuleType,
+    pub typ: BuildRuleType,
 }
-
-pub type Rules = HashMap<String, BuildRule>;
 
 pub fn buck_command(dir: impl AsRef<Path>, rule: impl AsRef<str>) -> Command {
     let mut cmd = Command::new("buck");
