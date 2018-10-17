@@ -1,9 +1,9 @@
 #![warn(clippy::all)]
 
-use std::path::PathBuf;
-
 #[macro_use]
 extern crate serde_derive;
+
+use std::path::PathBuf;
 
 use getopts::Options;
 
@@ -19,8 +19,7 @@ fn main() -> Result<(), failure::Error> {
     let file_path = PathBuf::from(matches.opt_str("f").unwrap());
     let rule = matches.opt_str("r").unwrap();
 
-    let output = buck::buck_command(file_path.parent().unwrap(), rule).output()?;
-    let rules: buck::Rules = serde_json::from_slice(&output.stdout)?;
+    let rules = buck::query_rules(file_path.parent().unwrap(), rule)?;
 
     println!("{:#?}", rules);
 

@@ -32,6 +32,18 @@ pub enum BuildRuleType {
     Other,
 }
 
+impl BuildRuleType {
+    fn krate_mut(&mut self) -> Option<&mut String> {
+        match self {
+            BuildRuleType::RustBinary(binary) => Some(&mut binary.krate),
+            BuildRuleType::RustLibrary(library) => Some(&mut library.krate),
+            BuildRuleType::RustTest(test) => Some(&mut test.krate),
+            BuildRuleType::PrebuiltRustLibrary(preb) => Some(&mut preb.krate),
+            _ => None,
+        }
+    }
+}
+
 /// A rust_binary() rule builds a native executable from the supplied set of
 /// Rust source files and dependencies.
 ///
@@ -289,5 +301,21 @@ pub fn buck_command(dir: impl AsRef<Path>, rule: impl AsRef<str>) -> Command {
     cmd
 }
 
-// TODO: Set `krate` field appropriately for each rule type (Defaults to the
-// rule name.)
+pub fn from_bytes(bytes: &[u8]) -> Result<Rules, serde_json::Error> {
+    let mut rules: Rules = serde_json::from_slice(bytes)?;
+
+    // Adjust default `crate` field to rule name, if applies
+    for rule in rules.values_mut() {
+        if let Some(krate) = rule.typ.krate_mut().filter(|x| x.is_empty()) {
+            *krate = rule.common.name.clone();
+        }
+    }
+
+    Ok(rules)
+}
+
+pub fn query_rules(dir: impl AsRef<Path>, rule: impl AsRef<str>) -> Result<Rules, failure::Error> {
+    let output = buck_command(dir, rule).output()?;
+
+    from_bytes(&output.stdout).map_err(|x| x.into())
+}
