@@ -13,13 +13,13 @@ fn main() -> Result<(), failure::Error> {
     let args = std::env::args().collect::<Vec<_>>();
 
     let mut opts = Options::new();
-    opts.reqopt("f", "buck-file", "Buck manifest to translate", "BUCK-FILE");
+    opts.reqopt("d", "dir", "Directory to run in", "DIR");
     opts.reqopt("r", "rule", "Buck rule to translate", "RULE");
     let matches = opts.parse(&args[1..])?;
-    let file_path = PathBuf::from(matches.opt_str("f").unwrap());
+    let dir = PathBuf::from(matches.opt_str("d").unwrap());
     let rule = matches.opt_str("r").unwrap();
 
-    let root = buck::buck_root(file_path.parent().unwrap())?;
+    let root = buck::buck_root(dir)?;
     let rules = buck::query_rules(&root, rule)?;
 
     println!("{:#?}", rules);
