@@ -4,8 +4,7 @@
 extern crate serde_derive;
 extern crate petgraph;
 
-use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use getopts::Options;
 
@@ -29,18 +28,9 @@ fn main() -> Result<(), failure::Error> {
     println!("{:#?}", rules);
     println!("root: {:#?}", root);
 
-    let dep_graph = graph::dep_graph(&rules);
-
     if let Some(gv_filename) = matches.opt_str("gv") {
-        use petgraph::dot::{Config, Dot};
-        use std::fs::OpenOptions;
-
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(gv_filename)?;
-        let output = format!("{:?}", Dot::with_config(&dep_graph, &[Config::EdgeNoLabel]));
-        let _ = file.write(output.as_bytes());
+        let dep_graph = graph::dep_graph(&rules);
+        graph::output_graphviz(Path::new(&gv_filename), &dep_graph)?;
     }
 
     if let Some((target, rule)) = rules.iter().find(|(_, r)| !r.typ.is_supported()) {
@@ -49,12 +39,6 @@ fn main() -> Result<(), failure::Error> {
             target,
             rule.typ.name()
         );
-    }
-
-    use petgraph::visit::Walker;
-    let topo = petgraph::visit::Topo::new(&dep_graph);
-    for ident in topo.iter(&dep_graph) {
-        println!("> {}", ident);
     }
 
     Ok(())
