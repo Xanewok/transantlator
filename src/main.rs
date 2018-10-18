@@ -35,11 +35,11 @@ fn main() -> Result<(), failure::Error> {
     }
 
     if let Some((target, rule)) = rules.iter().find(|(_, r)| !r.typ.is_supported()) {
-        panic!(
+        return Err(failure::format_err!(
             "Build target {} (of type {}) not supported",
             target,
             rule.typ.name()
-        );
+        ));
     }
 
     translate::translate_rules(&root, rules.iter())?;
