@@ -36,6 +36,16 @@ pub enum BuildRuleType {
 }
 
 impl BuildRuleType {
+    pub fn krate(&self) -> Option<&str> {
+        match self {
+            BuildRuleType::RustBinary(binary) => Some(&binary.krate),
+            BuildRuleType::RustLibrary(library) => Some(&library.krate),
+            BuildRuleType::RustTest(test) => Some(&test.krate),
+            BuildRuleType::PrebuiltRustLibrary(preb) => Some(&preb.krate),
+            _ => None,
+        }
+    }
+
     fn krate_mut(&mut self) -> Option<&mut String> {
         match self {
             BuildRuleType::RustBinary(binary) => Some(&mut binary.krate),
@@ -68,6 +78,20 @@ impl BuildRuleType {
     pub fn is_library(&self) -> bool {
         match self {
             BuildRuleType::RustLibrary(..) | BuildRuleType::PrebuiltRustLibrary(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_binary(&self) -> bool {
+        match self {
+            BuildRuleType::RustBinary(..) | BuildRuleType::RustTest(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_test(&self) -> bool {
+        match self {
+            BuildRuleType::RustTest(..) => true,
             _ => false,
         }
     }

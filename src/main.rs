@@ -10,6 +10,7 @@ use getopts::Options;
 
 mod buck;
 mod graph;
+mod translate;
 
 fn main() -> Result<(), failure::Error> {
     let args = std::env::args().collect::<Vec<_>>();
@@ -40,6 +41,8 @@ fn main() -> Result<(), failure::Error> {
             rule.typ.name()
         );
     }
+
+    translate::translate_rules(&root, rules.iter())?;
 
     Ok(())
 }
